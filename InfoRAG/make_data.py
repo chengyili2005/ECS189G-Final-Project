@@ -70,8 +70,7 @@ start_idx = 0
 end_idx = third_length
 
 # Parameters
-k = 7
-mask_token = '<MASK>'
+mask_token = ''
 
 # Initialize for collecting data
 final_df = []
@@ -104,25 +103,20 @@ for scenario_index, scenario in enumerate(scenarios):
          curr_article += row['text']
       curr_sentences = sent_tokenize(curr_article)
 
-      # Grab a random K consecutive sentences
-      max_start = max(len(curr_sentences) - k, 0)
-      sentence_start_idx = random.randint(0, max_start)
-      k_sentences = curr_sentences[sentence_start_idx:sentence_start_idx + k]
-
       # Task specific creation
       if scenario == 'Extraction':
 
          # Input is all k-sentences. Output is just a randomly selected sentence
-         input_context = ' '.join(k_sentences)
-         output_target = random.choice(k_sentences)
+         input_context = ' '.join(curr_sentences)
+         output_target = random.choice(curr_sentences)
 
       elif scenario == 'Correction':
 
          # Randomly mask/replace on informative tokens
-         output_target = random.choice(k_sentences)
+         output_target = random.choice(curr_sentences)
          masked_sentences = []
-         sentences_entitied = ner_pipeline(k_sentences)
-         for sentence, entities in zip(k_sentences, sentences_entitied):
+         sentences_entitied = ner_pipeline(curr_sentences)
+         for sentence, entities in zip(curr_sentences, sentences_entitied):
             masked_sentence = sentence
             offset = 0
             for entity in entities:
@@ -135,9 +129,9 @@ for scenario_index, scenario in enumerate(scenarios):
       elif scenario == 'Stimulation':
 
          # Input is all k-sentences without the target. Output is the target sentence
-         output_target = random.choice(k_sentences)
+         output_target = random.choice(curr_sentences)
          not_target = []
-         for sentence in k_sentences:
+         for sentence in curr_sentences:
             if sentence != output_target:
                not_target.append(sentence)
          input_context = ' '.join(not_target)
@@ -169,5 +163,5 @@ for scenario_index, scenario in enumerate(scenarios):
    logger.info(f"{scenario} partition created")
 
 final_df = pd.DataFrame(final_df)
-final_df.to_csv(OUTPUT_PATH)
+final_df.to_csv(OUTPUT_PATH, index=False)
 logger.info(f"Finetuning dataset created, {len(final_df)} examples")
