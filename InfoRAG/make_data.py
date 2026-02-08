@@ -163,5 +163,44 @@ for scenario_index, scenario in enumerate(scenarios):
    logger.info(f"{scenario} partition created")
 
 final_df = pd.DataFrame(final_df)
-final_df.to_csv(OUTPUT_PATH, index=False)
-logger.info(f"Finetuning dataset created, {len(final_df)} examples")
+
+# Check for NA values
+logger.info(f"Original dataset size: {len(final_df)}")
+logger.info("\n=== Data Quality Check ===")
+logger.info("Data types:")
+logger.info(final_df[['context', 'target_prefix', 'target_suffix']].dtypes)
+logger.info("\nNull values:")
+logger.info(final_df[['context', 'target_prefix', 'target_suffix']].isnull().sum())
+logger.info("\nEmpty strings:")
+logger.info((final_df['context'] == '').sum(), "empty contexts")
+logger.info((final_df['target_prefix'] == '').sum(), "empty prefixes")
+logger.info((final_df['target_suffix'] == '').sum(), "empty suffixes")
+
+# Apply cleaning
+def clean_text(text):
+    """Clean and validate text"""
+    if pd.isna(text):
+        return None
+    if not isinstance(text, str):
+        text = str(text)
+    text = text.strip()
+    if len(text) == 0:
+        return None
+    return text
+final_df['context_clean'] = final_df['context'].apply(clean_text)
+final_df['prefix_clean'] = final_df['target_prefix'].apply(clean_text)
+final_df['suffix_clean'] = final_df['target_suffix'].apply(clean_text)
+final_df_clean = final_df[
+    (final_df['context_clean'].notna()) &
+    (final_df['prefix_clean'].notna()) &
+    (final_df['suffix_clean'].notna())
+].copy()
+logger.info(f"\nDataset size after cleaning: {len(final_df_clean)}")
+logger.info(f"Removed {len(final_df) - len(final_df_clean)} bad rows")
+
+# Sample to fit distribution
+# TODO
+
+# Output dataset
+final_df_clean.to_csv(OUTPUT_PATH, index=False)
+logger.info(f"Finetuning dataset created, {len(final_df_clean)} examples")
