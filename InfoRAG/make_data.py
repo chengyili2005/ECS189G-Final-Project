@@ -70,7 +70,8 @@ start_idx = 0
 end_idx = third_length
 
 # Parameters
-mask_token = ''
+mask_token = '[MASK]'
+k = 15
 
 # Initialize for collecting data
 final_df = []
@@ -102,6 +103,7 @@ for scenario_index, scenario in enumerate(scenarios):
       for index, row in group.iterrows():
          curr_article += row['text']
       curr_sentences = sent_tokenize(curr_article)
+      curr_sentences = random.sample(curr_sentences, k=min(k, len(curr_sentences)))
 
       # Task specific creation
       if scenario == 'Extraction':
@@ -164,18 +166,6 @@ for scenario_index, scenario in enumerate(scenarios):
 
 final_df = pd.DataFrame(final_df)
 
-# Check for NA values
-logger.info(f"Original dataset size: {len(final_df)}")
-logger.info("\n=== Data Quality Check ===")
-logger.info("Data types:")
-logger.info(final_df[['context', 'target_prefix', 'target_suffix']].dtypes)
-logger.info("\nNull values:")
-logger.info(final_df[['context', 'target_prefix', 'target_suffix']].isnull().sum())
-logger.info("\nEmpty strings:")
-logger.info((final_df['context'] == '').sum(), "empty contexts")
-logger.info((final_df['target_prefix'] == '').sum(), "empty prefixes")
-logger.info((final_df['target_suffix'] == '').sum(), "empty suffixes")
-
 # Apply cleaning
 def clean_text(text):
     """Clean and validate text"""
@@ -195,11 +185,26 @@ final_df_clean = final_df[
     (final_df['prefix_clean'].notna()) &
     (final_df['suffix_clean'].notna())
 ].copy()
+final_df_clean.drop(columns=['context', 'target', 'target_suffix','target_prefix'], inplace=True)
 logger.info(f"\nDataset size after cleaning: {len(final_df_clean)}")
 logger.info(f"Removed {len(final_df) - len(final_df_clean)} bad rows")
 
 # Sample to fit distribution
-# TODO
+scenario_counts = final_df_clean['scenario'].value_counts()
+total_size = len(final_df_clean)
+target_counts = {
+    'Extraction': int(total_size * 0.20),
+    'Correction': int(total_size * 0.40),
+    'Stimulation': int(total_size * 0.40)
+}
+sampled_dfs = []
+for scenario, target_count in target_counts.items():
+    scenario_df = final_df_clean[final_df_clean['scenario'] == scenario]
+    replace = len(scenario_df) < target_count
+    sampled = scenario_df.sample(n=target_count, replace=replace, random_state=42)
+    sampled_dfs.append(sampled)
+final_df_clean = pd.concat(sampled_dfs, ignore_index=True)
+final_df_clean = final_df_clean.sample(frac=1, random_state=42).reset_index(drop=True)
 
 # Output dataset
 final_df_clean.to_csv(OUTPUT_PATH, index=False)
