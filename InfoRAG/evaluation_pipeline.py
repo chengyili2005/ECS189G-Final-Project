@@ -1,7 +1,6 @@
+
 import re
 from collections import Counter
-
-
 
 class Evaluator:
     def __init__(self, prompt_template, question_key, answer_key, context_key):
@@ -80,7 +79,7 @@ class Evaluator:
         
         # Compute average and store
         avg_em_score = sum(em_scores)/len(em_scores)
-        avg_f1_score = sum(f1_scores)/len(f1_scores)
+        avg_f1_score = sum(f1_score)/len(f1_score)
         
         self.results[model_name] = {
             "em_score": avg_em_score,
@@ -94,12 +93,12 @@ class Evaluator:
     def display_results(self):
       
         print("Results:")
-        print("------------------------------------------------")
+        print("-"*50)
 
         print(f"{'Model':<20}{'EM Score':<15}{'F1 Score':<15}")
-        print("------------------------------------------------")
+        print("-"*50)
 
         for model_name, data in self.results.items(): #print results for each model run with this evaluator 
             print(f"{model_name:<20}{data['em_score']:<15.4f}{data['f1_score']:<15.4f}")
         
-        print("------------------------------------------------")
+        print("-"*50)
