@@ -1,5 +1,5 @@
 .env
 psgs_w100.tsv
 *unsloth*
-Llama-3.2-3B-Instruct-InfoRAG
+*-InfoRAG/
 __pycache__
